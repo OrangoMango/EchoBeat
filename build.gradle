@@ -20,7 +20,7 @@ tasks.withType(JavaCompile) {
 
 application {
     mainModule = 'com.orangomango.memory'
-    mainClass = 'com.orangomango.memory.MainApplication'
+    mainClass = 'com.orangomango.memory.Launcher'
 }
 
 javafx {
