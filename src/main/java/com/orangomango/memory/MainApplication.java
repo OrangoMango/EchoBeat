@@ -40,6 +40,8 @@ public class MainApplication extends Application{
 	private Rectangle2D repButton, hintButton;
 	private double mode1Offset = 0, gameoverOffset = 0;
 	private Tile wrongTile;
+	private int repCount = 3, hintCount = 3;
+	private int repExtraSize = 0, hintExtraSize = 0;
 	
 	@Override
 	public void start(Stage stage){
@@ -57,25 +59,27 @@ public class MainApplication extends Application{
 			this.sequence.clear();
 			this.mode1Offset = 0;
 			this.gameoverOffset = 0;
+			this.repCount = 3;
+			this.hintCount = 3;
 			startCountdown();
 			startSequence(this.amount++, 4500);
 			if (this.gameMode == 1){
 				startSequence(this.amount-1, 4500, true);
 			}
-		});
+		}, "button_play.png");
 
-		this.creditsButton = new UiButton(120, 400, () -> {
+		this.creditsButton = new UiButton(120, 420, () -> {
 			System.out.println("Credits");
-		});
+		}, "button_credits.png");
 
 		// Board settings
 		final int w = 4;
 		final int h = 4;
-		final Point2D pos = new Point2D(75, 165);
+		final Point2D pos = new Point2D(75, 195);
 		this.board = new Board(pos, w, h);
 
-		this.repButton = new Rectangle2D(640, 380, 64, 64);
-		this.hintButton = new Rectangle2D(640, 465, 64, 64);
+		this.repButton = new Rectangle2D(640, 410, 64, 64);
+		this.hintButton = new Rectangle2D(640, 495, 64, 64);
 
 		canvas.setOnMousePressed(e -> {
 			switch (this.screenId){
@@ -90,12 +94,14 @@ public class MainApplication extends Application{
 
 					if (this.repButton.contains(e.getX(), e.getY()) && this.gameMode != 1){ // Does not work in game mode 1
 						// Repeat the entire sequence
-						if (this.ready){
+						if (this.ready && this.repCount > 0){
+							this.repCount--;
 							startSequence(this.amount-1, 650);
 						}
 					} else if (this.hintButton.contains(e.getX(), e.getY())){
 						// Highlight the next tile
-						if (this.ready){
+						if (this.ready && this.hintCount > 0){
+							this.hintCount--;
 							new Thread(() -> {
 								try {
 									Tile tile = this.gameMode == 0 ? getTileById(this.sequence.get(this.seqPos)) : (this.gameMode == 2 ? getTileById(this.sequence.get(this.sequence.size()-1-this.seqPos)) : this.wrongTile);
@@ -131,14 +137,12 @@ public class MainApplication extends Application{
 										AssetLoader.getInstance().getAudio(id+".wav").play();
 										if (this.gameMode == 1){
 											if (tile == this.wrongTile){
-												System.out.println("Correct");
 												this.wrongTile = null;
 											} else {
 												gameover();
 											}
 										} else {
 											if ((this.gameMode == 0 && this.sequence.get(this.seqPos) == id) || (this.gameMode == 2 && this.sequence.get(this.sequence.size()-1-this.seqPos) == id)){
-												System.out.println("Correct");
 												this.seqPos++;
 											} else {
 												gameover();
@@ -173,10 +177,24 @@ public class MainApplication extends Application{
 			switch (this.screenId){
 				case 0:
 					// Home screen
+					this.playButton.hover(e.getX(), e.getY());
+					this.creditsButton.hover(e.getX(), e.getY());
 					break;
 
 				case 1:
 					if (this.gameoverOffset != 0) return;
+
+					if (this.repButton.contains(e.getX(), e.getY())){
+						this.repExtraSize = 1;
+					} else {
+						this.repExtraSize = 0;
+					}
+
+					if (this.hintButton.contains(e.getX(), e.getY())){
+						this.hintExtraSize = 1;
+					} else {
+						this.hintExtraSize = 0;
+					}
 
 					for (int x = 0; x < w; x++){
 						for (int y = 0; y < h; y++){
@@ -195,7 +213,7 @@ public class MainApplication extends Application{
 
 		canvas.setFocusTraversable(true);
 		canvas.setOnKeyPressed(e -> {
-			if (e.getCode() == KeyCode.ESCAPE){
+			if (e.getCode() == KeyCode.ESCAPE && (this.screenId != 1 || this.ready)){
 				this.screenId = 0;
 			}
 
@@ -289,9 +307,14 @@ public class MainApplication extends Application{
 					}
 					this.ready = false;
 
-					startMode1Screen();
-					Thread.sleep(1100); // Wait before second round (ooo)
-					this.mode1Offset = 0;
+					if (this.amount <= 3){
+						startMode1Screen();
+						Thread.sleep(1600); // Wait before second round (ooo)
+						this.mode1Offset = 0;
+					} else {
+						Thread.sleep(700);
+					}
+					Thread.sleep(1000);
 				}
 				
 				final int lastSize = this.sequence.size();
@@ -337,8 +360,9 @@ public class MainApplication extends Application{
 	
 	private void update(GraphicsContext gc){
 		gc.clearRect(0, 0, WIDTH, HEIGHT);
-		gc.setFill(Color.web("#FDFBD5"));
-		gc.fillRect(0, 0, WIDTH, HEIGHT);
+		gc.drawImage(AssetLoader.getInstance().getImage("background.png"), 0, 0, WIDTH, HEIGHT);
+
+		gc.drawImage(AssetLoader.getInstance().getImage("logo.png"), 100, 15, 600, 150);
 
 		if (this.ready && this.gameoverOffset == 0){
 			this.elapsedTime += 1000/FPS;
@@ -349,44 +373,36 @@ public class MainApplication extends Application{
 			this.creditsButton.render(gc);
 
 			// Render game modes
-			gc.setFill(Color.LIME);
-			gc.fillRect(470, 150, 100, 100);
-			gc.fillRect(470, 270, 100, 100);
-			gc.fillRect(470, 390, 100, 100);
+			gc.drawImage(AssetLoader.getInstance().getImage("gamemode.png"), 1, 1, 32, 32, 470, 215, 100, 100);
+			gc.drawImage(AssetLoader.getInstance().getImage("gamemode.png"), 35, 1, 32, 32, 470, 335, 100, 100);
+			gc.drawImage(AssetLoader.getInstance().getImage("gamemode.png"), 69, 1, 32, 32, 470, 455, 100, 100);
 
 			gc.setFont(FONT_MEDIUM);
 			gc.setTextAlign(TextAlignment.LEFT);
-			gc.setFill(this.gameMode == 0 ? Color.RED : Color.BLACK);
-			gc.fillText("Standard", 590, 215);
-			gc.setFill(this.gameMode == 1 ? Color.RED : Color.BLACK);
-			gc.fillText("Odd One\nOut", 590, 320);
-			gc.setFill(this.gameMode == 2 ? Color.RED : Color.BLACK);
-			gc.fillText("Reverse", 590, 455);
+			gc.setFill(this.gameMode == 0 ? Color.RED : Color.web("#FDA619"));
+			gc.fillText("Standard", 590, 275);
+			gc.setFill(this.gameMode == 1 ? Color.RED : Color.web("#FDA619"));
+			gc.fillText("Odd One\nOut", 590, 375);
+			gc.setFill(this.gameMode == 2 ? Color.RED : Color.web("#FDA619"));
+			gc.fillText("Reverse", 590, 520);
 
-			gc.setFill(Color.BLACK);
+			gc.setFill(Color.web("#FDA619"));
 			gc.setTextAlign(TextAlignment.CENTER);
 			gc.setFont(FONT_BIG);
-			gc.fillText(">", 420, 200+this.gameMode*120);
+			gc.fillText("->", 420, 265+this.gameMode*120);
 		} else if (this.screenId == 1){
 			this.board.render(gc);
 
-			gc.setFill(this.ready ? Color.GREEN : Color.RED);
-			gc.fillOval(630, 150, 50, 50);
+			gc.drawImage(AssetLoader.getInstance().getImage("indicator.png"), 1+(this.ready ? 1 : 0)*34, 1, 32, 32, 630, 180, 50, 50);
 
 			long diff = this.elapsedTime / 1000;
-			gc.setFill(Color.BLACK);
+			gc.setFill(Color.WHITE);
 			gc.setTextAlign(TextAlignment.CENTER);
 			gc.setFont(FONT_SMALL);
-			gc.fillText(String.format("%02d:%02d\n\nLevel %d\nGame mode: %d", diff / 60, diff % 60, this.amount-1, this.gameMode+1), 655, 230);
+			gc.fillText(String.format("%02d:%02d\n\nLevel %d\nGame mode: %d", diff / 60, diff % 60, this.amount-1, this.gameMode+1), 655, 260);
 
-			gc.setFill(Color.LIME);
-
-
-			// Draw it disabled:
-			if (this.gameMode != 1) gc.fillRect(this.repButton.getMinX(), this.repButton.getMinY(), this.repButton.getWidth(), this.repButton.getHeight());
-			
-			gc.fillRect(this.hintButton.getMinX(), this.hintButton.getMinY(), this.hintButton.getWidth(), this.hintButton.getHeight());
-
+			gc.drawImage(AssetLoader.getInstance().getImage("repeatbutton.png"), 1+34*(this.gameMode == 1 ? 3 : 3-this.repCount), 1, 32, 32, this.repButton.getMinX()-10*this.repExtraSize, this.repButton.getMinY()-10*this.repExtraSize, this.repButton.getWidth()+20*this.repExtraSize, this.repButton.getHeight()+20*this.repExtraSize);
+			gc.drawImage(AssetLoader.getInstance().getImage("hintbutton.png"), 1+34*(3-this.hintCount), 1, 32, 32, this.hintButton.getMinX()-10*this.hintExtraSize, this.hintButton.getMinY()-10*this.hintExtraSize, this.hintButton.getWidth()+20*this.hintExtraSize, this.hintButton.getHeight()+20*this.hintExtraSize);
 
 			if (this.countdownNumber > 0){
 				gc.save();
@@ -394,8 +410,7 @@ public class MainApplication extends Application{
 				gc.setGlobalAlpha(0.8);
 				gc.fillRect(0, 0, WIDTH, HEIGHT);
 				gc.restore();
-				gc.setFill(this.countdownNumber == 3 ? Color.RED : (this.countdownNumber == 2 ? Color.YELLOW : Color.GREEN));
-				gc.fillRect(300, 250, 200, 200);
+				gc.drawImage(AssetLoader.getInstance().getImage("countdown.png"), 1+34*(3-this.countdownNumber), 1, 32, 32, 300, 250, 200, 200);
 			}
 
 			if (this.mode1Offset > 0){
@@ -404,18 +419,24 @@ public class MainApplication extends Application{
 				gc.setGlobalAlpha(0.8);
 				gc.fillRect(0, 0, WIDTH, HEIGHT);
 				gc.restore();
-				gc.setFill(Color.RED);
-				gc.fillRect(WIDTH-this.mode1Offset-100, HEIGHT/2-100, 200, 200);
+				gc.drawImage(AssetLoader.getInstance().getImage("mode1.png"), WIDTH-this.mode1Offset-100, HEIGHT/2-180, 200, 200);
+				gc.setFill(Color.BLUE);
+				gc.setTextAlign(TextAlignment.CENTER);
+				gc.setFont(FONT_BIG);
+				gc.fillText("Now spot the wrong beat!", WIDTH/2, HEIGHT/2+120);
 			}
 
 			if (this.gameoverOffset > 0){
 				gc.save();
 				gc.setFill(Color.BLACK);
-				gc.setGlobalAlpha(0.8);
+				gc.setGlobalAlpha(0.9);
 				gc.fillRect(0, 0, WIDTH, HEIGHT);
 				gc.restore();
-				gc.setFill(Color.BLUE);
-				gc.fillRect(WIDTH-this.gameoverOffset-100, HEIGHT/2-100, 200, 200);
+				gc.drawImage(AssetLoader.getInstance().getImage("gameover.png"), WIDTH-this.gameoverOffset-100, HEIGHT/2-220, 200, 200);
+				gc.setFill(Color.RED);
+				gc.setTextAlign(TextAlignment.CENTER);
+				gc.setFont(FONT_BIG);
+				gc.fillText(String.format("You reached level %d in %02d:%02d!\nYou can do better!  [ESC]", this.amount-1, diff / 60, diff % 60), WIDTH/2, HEIGHT/2+150);
 			}
 
 			if (this.hearSound){

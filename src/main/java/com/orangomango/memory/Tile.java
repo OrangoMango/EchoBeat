@@ -48,7 +48,7 @@ public class Tile{
 			gc.save();
 			gc.setFill(Color.WHITE);
 			gc.setGlobalAlpha(0.8);
-			gc.fillRect(this.x*(SIZE+GAP), this.y*(SIZE+GAP), SIZE, SIZE);
+			gc.fillRect(this.x*(SIZE+GAP)+5, this.y*(SIZE+GAP)+5, SIZE-10, SIZE-10);
 			gc.restore();
 		}
 	}

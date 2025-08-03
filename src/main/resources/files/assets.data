@@ -1,4 +1,15 @@
 /images/tile.png
+/images/button_play.png
+/images/button_credits.png
+/images/gamemode.png
+/images/countdown.png
+/images/indicator.png
+/images/repeatbutton.png
+/images/hintbutton.png
+/images/gameover.png
+/images/mode1.png
+/images/logo.png
+/images/background.png
 
 /audio/0.wav
 /audio/1.wav
