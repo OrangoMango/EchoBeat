@@ -25,6 +25,7 @@ public class UiButton{
 	public void onClick(double ex, double ey){
 		Rectangle2D rect = new Rectangle2D(this.x, this.y+this.offsetY, WIDTH, HEIGHT);
 		if (rect.contains(ex, ey)){
+			AssetLoader.getInstance().getAudio("clickmenu.wav").play();
 			this.onClick.run();
 		}
 	}

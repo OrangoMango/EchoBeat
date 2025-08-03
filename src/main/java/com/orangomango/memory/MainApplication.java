@@ -13,6 +13,7 @@ import javafx.util.Duration;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.KeyCode;
+import javafx.scene.media.MediaPlayer;
 
 import java.util.*;
 
@@ -21,6 +22,7 @@ public class MainApplication extends Application{
 	private static final double HEIGHT = 700;
 	private static final int FPS = 40;
 
+	private static final Font FONT_SMALLSMALL = Font.loadFont(MainApplication.class.getResourceAsStream("/files/font.ttf"), 17);
 	private static final Font FONT_SMALL = Font.loadFont(MainApplication.class.getResourceAsStream("/files/font.ttf"), 25);
 	private static final Font FONT_MEDIUM = Font.loadFont(MainApplication.class.getResourceAsStream("/files/font.ttf"), 32);
 	private static final Font FONT_BIG = Font.loadFont(MainApplication.class.getResourceAsStream("/files/font.ttf"), 40);
@@ -42,6 +44,8 @@ public class MainApplication extends Application{
 	private Tile wrongTile;
 	private int repCount = 3, hintCount = 3;
 	private int repExtraSize = 0, hintExtraSize = 0;
+	private long lastCreditCheck;
+	private double hsb;
 	
 	@Override
 	public void start(Stage stage){
@@ -50,6 +54,11 @@ public class MainApplication extends Application{
 		GraphicsContext gc = canvas.getGraphicsContext2D();
 		gc.setImageSmoothing(false);
 		pane.getChildren().add(canvas);
+
+		MediaPlayer player = new MediaPlayer(AssetLoader.getInstance().getMusic("bgmusic.wav"));
+		player.setVolume(0.1);
+		player.setCycleCount(MediaPlayer.INDEFINITE);
+		player.play();
 
 		// Home screen buttons
 		this.playButton = new UiButton(120, 300, () -> {
@@ -62,14 +71,14 @@ public class MainApplication extends Application{
 			this.repCount = 3;
 			this.hintCount = 3;
 			startCountdown();
-			startSequence(this.amount++, 4500);
+			startSequence(this.amount++, 5000);
 			if (this.gameMode == 1){
 				startSequence(this.amount-1, 4500, true);
 			}
 		}, "button_play.png");
 
 		this.creditsButton = new UiButton(120, 420, () -> {
-			System.out.println("Credits");
+			this.screenId = 2;
 		}, "button_credits.png");
 
 		// Board settings
@@ -96,12 +105,14 @@ public class MainApplication extends Application{
 						// Repeat the entire sequence
 						if (this.ready && this.repCount > 0){
 							this.repCount--;
+							AssetLoader.getInstance().getAudio("click.wav").play();
 							startSequence(this.amount-1, 650);
 						}
 					} else if (this.hintButton.contains(e.getX(), e.getY())){
 						// Highlight the next tile
 						if (this.ready && this.hintCount > 0){
 							this.hintCount--;
+							AssetLoader.getInstance().getAudio("click.wav").play();
 							new Thread(() -> {
 								try {
 									Tile tile = this.gameMode == 0 ? getTileById(this.sequence.get(this.seqPos)) : (this.gameMode == 2 ? getTileById(this.sequence.get(this.sequence.size()-1-this.seqPos)) : this.wrongTile);
@@ -152,18 +163,22 @@ public class MainApplication extends Application{
 								}
 							}
 
-							if (this.gameoverOffset == 0){
-								if (this.gameMode == 1){ // Odd One Out
-									if (this.wrongTile == null){
-										startSequence(this.amount++, 2000);
-										startSequence(this.amount-1, 2000, true);
-									}
-								} else {
-									if (this.seqPos == this.sequence.size()){
-										startSequence(this.amount++, 2000);
+							schedule(() -> {
+								if (this.gameoverOffset == 0){
+									if (this.gameMode == 1){ // Odd One Out
+										if (this.wrongTile == null){
+											AssetLoader.getInstance().getAudio("levelup.wav").play();
+											startSequence(this.amount++, 2000);
+											startSequence(this.amount-1, 2000, true);
+										}
+									} else {
+										if (this.seqPos == this.sequence.size()){
+											AssetLoader.getInstance().getAudio("levelup.wav").play();
+											startSequence(this.amount++, 2000);
+										}
 									}
 								}
-							}
+							}, 500);
 						}
 					}
 					break;
@@ -223,8 +238,10 @@ public class MainApplication extends Application{
 					if (this.gameMode < 0){
 						this.gameMode = 3+this.gameMode;
 					}
+					AssetLoader.getInstance().getAudio("gamemode.wav").play();
 				} else if (e.getCode() == KeyCode.DOWN){
 					this.gameMode = (this.gameMode + 1) % 3;
+					AssetLoader.getInstance().getAudio("gamemode.wav").play();
 				}
 			} else if (this.screenId == 1){
 				if (this.gameoverOffset != 0) return;
@@ -251,8 +268,21 @@ public class MainApplication extends Application{
 		
 		stage.setScene(new Scene(pane, WIDTH, HEIGHT));
 		stage.setTitle("EchoBeat v1.0");
+		stage.getIcons().add(AssetLoader.getInstance().getImage("icon.png"));
 		stage.setResizable(false);
 		stage.show();
+	}
+
+	private void schedule(Runnable r, int delay){
+		Thread t = new Thread(() -> {
+			try {
+				Thread.sleep(delay);
+				r.run();
+			} catch (InterruptedException ex){
+				ex.printStackTrace();
+			}
+		});
+		t.start();
 	}
 
 	private void startCountdown(){
@@ -260,6 +290,7 @@ public class MainApplication extends Application{
 			for (int i = 3; i >= 0; i--){
 				try {
 					Thread.sleep(1000);
+					AssetLoader.getInstance().getAudio(i == 0 ? "go.mp3" : "countdown.wav").play();
 					this.countdownNumber = i;
 				} catch (InterruptedException ex){
 					ex.printStackTrace();
@@ -286,6 +317,7 @@ public class MainApplication extends Application{
 					ex.printStackTrace();
 				}
 			}
+			AssetLoader.getInstance().getAudio("gameover.wav").play();
 		});
 		t.start();
 	}
@@ -308,6 +340,7 @@ public class MainApplication extends Application{
 					this.ready = false;
 
 					if (this.amount <= 3){
+						AssetLoader.getInstance().getAudio("mode1.wav").play();
 						startMode1Screen();
 						Thread.sleep(1600); // Wait before second round (ooo)
 						this.mode1Offset = 0;
@@ -400,6 +433,10 @@ public class MainApplication extends Application{
 			gc.setTextAlign(TextAlignment.CENTER);
 			gc.setFont(FONT_SMALL);
 			gc.fillText(String.format("%02d:%02d\n\nLevel %d\nGame mode: %d", diff / 60, diff % 60, this.amount-1, this.gameMode+1), 655, 260);
+			
+			gc.setFont(FONT_SMALLSMALL);
+			gc.setTextAlign(TextAlignment.LEFT);
+			gc.fillText("Hold [H] to listen", 600, 650);
 
 			gc.drawImage(AssetLoader.getInstance().getImage("repeatbutton.png"), 1+34*(this.gameMode == 1 ? 3 : 3-this.repCount), 1, 32, 32, this.repButton.getMinX()-10*this.repExtraSize, this.repButton.getMinY()-10*this.repExtraSize, this.repButton.getWidth()+20*this.repExtraSize, this.repButton.getHeight()+20*this.repExtraSize);
 			gc.drawImage(AssetLoader.getInstance().getImage("hintbutton.png"), 1+34*(3-this.hintCount), 1, 32, 32, this.hintButton.getMinX()-10*this.hintExtraSize, this.hintButton.getMinY()-10*this.hintExtraSize, this.hintButton.getWidth()+20*this.hintExtraSize, this.hintButton.getHeight()+20*this.hintExtraSize);
@@ -436,13 +473,22 @@ public class MainApplication extends Application{
 				gc.setFill(Color.RED);
 				gc.setTextAlign(TextAlignment.CENTER);
 				gc.setFont(FONT_BIG);
-				gc.fillText(String.format("You reached level %d in %02d:%02d!\nYou can do better!  [ESC]", this.amount-1, diff / 60, diff % 60), WIDTH/2, HEIGHT/2+150);
+				gc.fillText(String.format("You reached level %d in %02d:%02d.\nYou can do better!  [ESC]", this.amount-1, diff / 60, diff % 60), WIDTH/2, HEIGHT/2+150);
 			}
 
 			if (this.hearSound){
-				gc.setFill(Color.GRAY);
-				gc.fillRect(this.mouseX-25, this.mouseY-25, 50, 50);
+				gc.drawImage(AssetLoader.getInstance().getImage("volume.png"), this.mouseX-25, this.mouseY-25, 50, 50);
 			}
+		} else if (this.screenId == 2){
+			gc.setFill(Color.hsb(this.hsb, 1, 1));
+			long now = System.currentTimeMillis();
+			if (now-this.lastCreditCheck > 50){
+				this.lastCreditCheck = now;
+				this.hsb = (this.hsb + 5) % 360;
+			}
+			gc.setFont(FONT_BIG);
+			gc.setTextAlign(TextAlignment.CENTER);
+			gc.fillText("GMTK Game Jam 2025\nCode and Images by OrangoMango\n\nhttps://orangomango.github.io\n\n---- [ESC] ----\nEchoBeat v1.0\n> Made with Java and JavaFX,\nno game engine :)", WIDTH/2, HEIGHT/2-100);
 		}
 	}
 	

@@ -71,7 +71,13 @@ public class AssetLoader{
 
 	private void loadAudio(String name){
 		String[] data = name.split("/");
-		this.audios.put(data[data.length-1], new AudioClip(getClass().getResource(name).toExternalForm()));
+		AudioClip clip = new AudioClip(getClass().getResource(name).toExternalForm());
+		if (data[data.length-1].matches("^[0-9].*")){
+			clip.setVolume(2.0); // ikik
+		} else {
+			clip.setVolume(0.1);
+		}
+		this.audios.put(data[data.length-1], clip);
 	}
 
 	private void loadMusic(String name){

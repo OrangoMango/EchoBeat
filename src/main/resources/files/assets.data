@@ -10,6 +10,8 @@
 /images/mode1.png
 /images/logo.png
 /images/background.png
+/images/volume.png
+/images/icon.png
 
 /audio/0.wav
 /audio/1.wav
@@ -27,3 +29,13 @@
 /audio/13.wav
 /audio/14.wav
 /audio/15.wav
+/audio/click.wav
+/audio/clickmenu.wav
+/audio/countdown.wav
+/audio/gamemode.wav
+/audio/gameover.wav
+/audio/levelup.wav
+/audio/mode1.wav
+/audio/go.mp3
+
+/audio/bgmusic.wav
